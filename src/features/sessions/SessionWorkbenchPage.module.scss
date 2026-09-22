@@ -1,0 +1,119 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  h1 {
+    margin: 0 0 8px;
+  }
+  p {
+    color: var(--text-secondary);
+    max-width: 760px;
+  }
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 24px;
+}
+.conversation {
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    max-width: 580px;
+  }
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  button {
+    text-align: left;
+    cursor: pointer;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-wrap: anywhere;
+  }
+  button[aria-current='page'] {
+    border-color: var(--primary-color);
+    box-shadow: inset 3px 0 0 var(--primary-color);
+  }
+  small,
+  span {
+    color: var(--text-secondary);
+  }
+}
+.details {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.settings {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 16px;
+}
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100px;
+  margin: 24px 0;
+  article {
+    border-radius: 12px;
+    padding: 16px;
+    p {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin: 10px 0 0;
+      line-height: 1.6;
+    }
+    strong {
+      font-size: 12px;
+    }
+  }
+}
+.user {
+  background: var(--bg-secondary);
+  margin-left: 32px;
+}
+.assistant {
+  border: 1px solid var(--border-color);
+  margin-right: 32px;
+}
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .settings {
+    grid-template-columns: 1fr;
+  }
+  .header {
+    flex-direction: column;
+  }
+  .list {
+    max-height: 220px;
+    overflow: auto;
+  }
+}

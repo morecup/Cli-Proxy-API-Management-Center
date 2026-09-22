@@ -354,9 +354,6 @@ const serializeProviderKey = (config: ProviderKeyConfig) => {
       payload.cloak = cloakPayload;
     }
   }
-  if (config.fingerprintProfile?.trim()) {
-    payload['fingerprint-profile'] = config.fingerprintProfile.trim();
-  }
   return payload;
 };
 

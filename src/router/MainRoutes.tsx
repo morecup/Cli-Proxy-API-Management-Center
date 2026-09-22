@@ -1,4 +1,5 @@
 import { Navigate, useRoutes, type Location } from 'react-router-dom';
+import { SessionWorkbenchPage } from '@/features/sessions/SessionWorkbenchPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ProvidersWorkbenchPage } from '@/features/providers/ProvidersWorkbenchPage';
 import { AuthFilesPage } from '@/features/authFiles/AuthFilesPage';
@@ -16,6 +17,8 @@ import { useAuthStore } from '@/stores';
 
 const createMainRoutes = (supportsPlugin: boolean) => [
   { path: '/', element: <DashboardPage /> },
+  { path: '/new', element: <SessionWorkbenchPage /> },
+  { path: '/epitaxy/:sessionId', element: <SessionWorkbenchPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },

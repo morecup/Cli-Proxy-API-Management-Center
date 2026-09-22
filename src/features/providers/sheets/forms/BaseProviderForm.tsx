@@ -96,7 +96,6 @@ function buildInitialForm(
       cloak: isClaudeLikeBrand(brand)
         ? { mode: '', strictMode: false, sensitiveWordsText: '', cacheUserId: false }
         : undefined,
-      fingerprintProfile: isClaudeLikeBrand(brand) ? '' : undefined,
       testModel:
         brand === 'openaiCompatibility' ||
         brand === 'codex' ||
@@ -192,9 +191,6 @@ function buildInitialForm(
           sensitiveWordsText: (cfg as ProviderKeyConfig).cloak?.sensitiveWords?.join('\n') ?? '',
           cacheUserId: (cfg as ProviderKeyConfig).cloak?.cacheUserId === true,
         }
-      : undefined,
-    fingerprintProfile: isClaudeLikeBrand(brand)
-      ? ((cfg as ProviderKeyConfig).fingerprintProfile ?? '')
       : undefined,
     testModel:
       brand === 'codex' ||
@@ -935,34 +931,6 @@ export function BaseProviderForm({
             />
           </div>
         </Collapsible>
-      ) : null}
-
-      {isClaudeLikeBrand(brand) ? (
-        <div className={styles.field}>
-          <label id={`${fid}-fingerprint-profile-label`} className={styles.label}>
-            {t('providersPage.form.fingerprintProfile')}
-          </label>
-          <Select
-            id={`${fid}-fingerprint-profile`}
-            value={form.fingerprintProfile ?? ''}
-            options={[
-              {
-                value: '',
-                label: t('providersPage.form.fingerprintProfileDefault'),
-              },
-              {
-                value: 'claude-code-cli',
-                label: t('providersPage.form.fingerprintProfileClaudeCodeCli'),
-              },
-            ]}
-            onChange={(value) => updateField('fingerprintProfile', value)}
-            disabled={mutating}
-            ariaLabelledBy={`${fid}-fingerprint-profile-label`}
-          />
-          <small className={styles.labelHint}>
-            {t('providersPage.form.fingerprintProfileHint')}
-          </small>
-        </div>
       ) : null}
 
       {descriptor.supportsCloak && form.cloak ? (

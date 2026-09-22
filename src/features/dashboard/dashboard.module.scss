@@ -856,6 +856,761 @@
   }
 }
 
+/* ---------- Claude Desktop 遥测 ---------- */
+
+.telemetryHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-lg;
+
+  @media (max-width: 760px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.telemetryActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  @media (max-width: 760px) {
+    justify-content: flex-start;
+  }
+}
+
+.telemetrySummary {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: $spacing-lg;
+
+  @media (max-width: 760px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.telemetryIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+
+  strong {
+    font-size: 19px;
+    color: var(--text-primary);
+  }
+
+  code {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--text-tertiary);
+    font-family: $font-mono;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.telemetryMeta {
+  color: var(--text-quaternary);
+  font-family: $font-mono;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.telemetryTransports {
+  display: grid;
+  gap: 7px;
+
+  .telemetryDelivery {
+    display: flex;
+  }
+
+  .telemetryMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+.telemetryDelivery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 7px;
+}
+
+.telemetryEndpointLabel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+
+  small {
+    padding: 1px 5px;
+    border: 1px solid var(--border-color);
+    border-radius: $radius-full;
+    color: var(--text-quaternary);
+    font-size: 9px;
+    line-height: 1.35;
+  }
+}
+
+.telemetryDeliveryStatus {
+  display: inline-flex;
+  padding: 2px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-full;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.telemetryDeliveryStatus_ready {
+  border-color: color-mix(in srgb, var(--viz-success) 35%, transparent);
+  color: var(--success-badge-text);
+  background: color-mix(in srgb, var(--viz-success) 9%, transparent);
+}
+
+.telemetryDeliveryStatus_awaiting-enrollment-material {
+  border-color: color-mix(in srgb, var(--amber-color) 40%, transparent);
+  color: var(--amber-color);
+  background: color-mix(in srgb, var(--amber-color) 9%, transparent);
+}
+
+.telemetryDeliveryReason {
+  flex-basis: 100%;
+  color: var(--text-quaternary);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.telemetryHealth,
+.telemetryAccountHealth {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.telemetryHealth {
+  padding: 5px 9px;
+  border: 1px solid currentColor;
+  border-radius: $radius-full;
+
+  i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+.telemetryHealth_healthy {
+  color: var(--viz-success);
+}
+
+.telemetryHealth_degraded {
+  color: var(--amber-color);
+}
+
+.telemetryHealth_unhealthy {
+  color: var(--viz-failure);
+}
+
+.telemetryHealth_disabled {
+  color: var(--text-quaternary);
+}
+
+.telemetryCounters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--border-color);
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  div {
+    min-width: 0;
+    padding: $spacing-md;
+    background: var(--bg-primary);
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  dd {
+    margin: 5px 0 0;
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 21px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.telemetryEvidence {
+  display: grid;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--primary-color) 4%, transparent);
+}
+
+.telemetryEvidenceHead,
+.telemetryObservedHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+  }
+
+  > div {
+    display: grid;
+    gap: 3px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  code {
+    color: var(--text-quaternary);
+    font-family: $font-mono;
+    font-size: 10px;
+  }
+}
+
+.telemetryScope {
+  display: grid;
+  gap: $spacing-sm;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+
+  p {
+    margin: 0;
+  }
+
+  summary {
+    cursor: pointer;
+    padding: $spacing-sm 0;
+    font-weight: 600;
+  }
+
+  ul {
+    margin: $spacing-sm 0;
+    padding-left: $spacing-md;
+  }
+
+  li {
+    display: grid;
+    gap: 4px;
+    padding: $spacing-sm 0;
+    border-bottom: 1px solid var(--border-color);
+    overflow-wrap: anywhere;
+  }
+}
+
+.telemetryScopeDigest {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+  color: var(--text-tertiary);
+}
+
+.telemetryScopeInventory {
+  max-height: 26rem;
+  overflow: auto;
+
+  .telemetryTable {
+    min-width: 0;
+    table-layout: fixed;
+
+    th,
+    td {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    th:nth-child(1) {
+      width: 25%;
+    }
+    th:nth-child(2) {
+      width: 47%;
+    }
+  }
+
+  caption {
+    text-align: left;
+    padding: $spacing-sm;
+  }
+  td {
+    overflow-wrap: anywhere;
+  }
+}
+
+.telemetryEvidenceCounters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $spacing-sm;
+  margin: 0;
+
+  @media (max-width: 760px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  div {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    background: var(--bg-primary);
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  dd {
+    margin: 4px 0 0;
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 18px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-quaternary);
+    font-family: $font-family;
+    font-size: 9px;
+    font-weight: 500;
+  }
+}
+
+.telemetryObservedEndpoints {
+  padding: $spacing-md;
+  border-top: 1px solid var(--border-color);
+
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-sm;
+    margin: $spacing-sm 0 0;
+    padding: 0;
+    list-style: none;
+
+    @media (max-width: 860px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  li {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    background: var(--bg-primary);
+
+    > small {
+      color: var(--text-quaternary);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+  }
+}
+
+.telemetryObservedIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+
+  code {
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  span {
+    padding: 2px 6px;
+    border-radius: $radius-full;
+    font-size: 9px;
+    font-weight: 700;
+  }
+}
+
+.telemetryObserved_captured-delivery-enabled {
+  background: color-mix(in srgb, var(--viz-success) 12%, transparent);
+  color: var(--viz-success);
+}
+
+.telemetryObserved_captured-runtime-credential-required {
+  background: color-mix(in srgb, var(--amber-color) 12%, transparent);
+  color: var(--amber-color);
+}
+
+.telemetryObserved_captured-wire-only {
+  background: color-mix(in srgb, var(--text-tertiary) 12%, transparent);
+  color: var(--text-tertiary);
+}
+
+.telemetryObservedStats {
+  color: var(--text-tertiary);
+  font-family: $font-mono;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.telemetryTableWrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--border-color);
+}
+
+.telemetryTable {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  td {
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    vertical-align: top;
+  }
+
+  code {
+    color: var(--text-primary);
+    font-family: $font-mono;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.telemetryCellDetail {
+  display: block;
+  max-width: 280px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--viz-failure);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.telemetryDisabledEndpoints {
+  padding-top: $spacing-md;
+  border-top: 1px solid var(--border-color);
+
+  > strong {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-sm;
+    margin: $spacing-sm 0 0;
+    padding: 0;
+    list-style: none;
+
+    @media (max-width: 760px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--amber-color) 8%, transparent);
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  code {
+    color: var(--amber-color);
+    font-family: $font-mono;
+    font-weight: 650;
+  }
+}
+
+.telemetryError {
+  margin: 0;
+  padding: $spacing-md;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--viz-failure) 9%, transparent);
+  color: var(--viz-failure);
+  font-size: 13px;
+}
+
+.telemetryWarning {
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid color-mix(in srgb, var(--amber-color) 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--amber-color) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.telemetrySuccess {
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid color-mix(in srgb, var(--viz-success) 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--viz-success) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.desktopRuntimeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+  padding: $spacing-md;
+
+  @media (max-width: 980px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.desktopRuntimeCard {
+  display: grid;
+  gap: $spacing-md;
+  min-width: 0;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
+}
+
+.desktopRuntimeCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+
+  > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  code {
+    overflow: hidden;
+    color: var(--text-quaternary);
+    font-family: $font-mono;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.desktopRuntimeState {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: $radius-full;
+  background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.desktopRuntimeState_active {
+  background: color-mix(in srgb, var(--viz-success) 12%, transparent);
+  color: var(--viz-success);
+}
+
+.desktopRuntimeState_stopping {
+  background: color-mix(in srgb, var(--amber-color) 12%, transparent);
+  color: var(--amber-color);
+}
+
+.desktopRuntimeState_quarantined {
+  background: color-mix(in srgb, var(--viz-failure) 12%, transparent);
+  color: var(--viz-failure);
+}
+
+.desktopRuntimeState_disabled,
+.desktopRuntimeState_not-provisioned {
+  background: color-mix(in srgb, var(--text-quaternary) 12%, transparent);
+  color: var(--text-quaternary);
+}
+
+.desktopRuntimeFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px $spacing-md;
+  margin: 0;
+
+  @include mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  dt {
+    color: var(--text-quaternary);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  code {
+    color: var(--text-primary);
+    font-family: $font-mono;
+  }
+}
+
+.desktopRuntimeActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1px solid var(--border-color);
+
+  small {
+    color: var(--amber-color);
+    font-size: 10px;
+  }
+}
+
+.desktopStartupStatus {
+  display: grid;
+  gap: 6px;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+
+  small {
+    color: var(--amber-color);
+    font-family: $font-mono;
+  }
+}
+
+.desktopStartupStatusHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+
+  strong {
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+}
+
+.desktopStartupState {
+  padding: 2px 7px;
+  border-radius: $radius-full;
+  background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.desktopStartupState_ready {
+  background: color-mix(in srgb, var(--viz-success) 12%, transparent);
+  color: var(--viz-success);
+}
+
+.desktopStartupState_starting,
+.desktopStartupState_missing-session-key,
+.desktopStartupState_degraded {
+  background: color-mix(in srgb, var(--amber-color) 12%, transparent);
+  color: var(--amber-color);
+}
+
+.desktopStartupState_stopped {
+  background: color-mix(in srgb, var(--text-quaternary) 12%, transparent);
+  color: var(--text-quaternary);
+}
+
 /* ---------- CTA ---------- */
 
 .ctaGrid {

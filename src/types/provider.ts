@@ -53,7 +53,6 @@ export interface ProviderKeyConfig {
   excludedModels?: string[];
   disableCooling?: boolean;
   cloak?: CloakConfig;
-  fingerprintProfile?: string;
   authIndex?: string;
 }
 

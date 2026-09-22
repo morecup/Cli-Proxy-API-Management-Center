@@ -213,9 +213,6 @@ const buildProviderKeyConfig = (
       cacheUserId: input.cloak.cacheUserId === true,
     };
   }
-  if (brand === 'claude') {
-    next.fingerprintProfile = input.fingerprintProfile?.trim() || undefined;
-  }
   return next;
 };
 

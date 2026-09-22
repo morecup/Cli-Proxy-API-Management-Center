@@ -26,6 +26,8 @@ import iconGrokDark from '@/assets/icons/grok-dark.svg';
 
 interface ProviderState {
   url?: string;
+  flow?: string;
+  loginUrl?: string;
   state?: string;
   status?: 'idle' | 'waiting' | 'success' | 'error';
   error?: string;
@@ -34,6 +36,10 @@ interface ProviderState {
   callbackSubmitting?: boolean;
   callbackStatus?: 'success' | 'error';
   callbackError?: string;
+  magicLink?: string;
+  magicLinkSubmitting?: boolean;
+  magicLinkStatus?: 'success' | 'error';
+  magicLinkError?: string;
 }
 
 interface VertexImportResult {
@@ -107,7 +113,7 @@ const PROVIDERS: BuiltInOAuthProviderCard[] = [
 ];
 
 const BUILTIN_PROVIDER_IDS = new Set<string>(PROVIDERS.map((provider) => provider.id));
-const CALLBACK_SUPPORTED = new Set<string>(['codex', 'anthropic', 'antigravity', 'xai']);
+const CALLBACK_SUPPORTED = new Set<string>(['codex', 'antigravity', 'xai']);
 const XAI_CALLBACK_URL = 'http://127.0.0.1:56121/callback';
 const SUCCESS_RESET_DELAY_MS = 5000;
 const getProviderI18nPrefix = (provider: string) => provider.replace('-', '_');
@@ -239,6 +245,9 @@ const resolveCallbackUrl = (provider: string, input: string, state?: string): st
   return buildXaiCallbackUrl(input, state);
 };
 
+const isClaudeDesktopMagicLinkFlow = (provider: OAuthProviderCard, state: ProviderState) =>
+  provider.kind === 'builtin' && provider.id === 'anthropic' && state.flow === 'magic_link';
+
 export function OAuthPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -360,6 +369,8 @@ export function OAuthPage() {
     notifyAuthFilesChanged();
     updateProviderState(provider, {
       url: undefined,
+      flow: undefined,
+      loginUrl: undefined,
       state: undefined,
       status: 'success',
       error: undefined,
@@ -368,6 +379,10 @@ export function OAuthPage() {
       callbackSubmitting: false,
       callbackStatus: undefined,
       callbackError: undefined,
+      magicLink: '',
+      magicLinkSubmitting: false,
+      magicLinkStatus: undefined,
+      magicLinkError: undefined,
     });
     successResetTimers.current[provider] = window.setTimeout(() => {
       resetProviderAttempt(provider);
@@ -415,9 +430,24 @@ export function OAuthPage() {
       callbackStatus: undefined,
       callbackError: undefined,
       callbackUrl: '',
+      magicLink: '',
+      magicLinkSubmitting: false,
+      magicLinkStatus: undefined,
+      magicLinkError: undefined,
     });
     try {
       const res = await oauthApi.startAuth(provider);
+      const requiresMagicLink = provider === 'anthropic';
+      if (requiresMagicLink && res.flow !== 'magic_link') {
+        const message = t('auth_login.anthropic_magic_link_upgrade_hint');
+        updateProviderState(provider, {
+          status: 'error',
+          error: message,
+          polling: false,
+        });
+        showNotification(message, 'error');
+        return;
+      }
       if (!res.state) {
         const message = t('auth_login.missing_state');
         updateProviderState(provider, {
@@ -432,6 +462,8 @@ export function OAuthPage() {
       }
       updateProviderState(provider, {
         url: res.url,
+        flow: res.flow,
+        loginUrl: res.login_url,
         state: res.state,
         status: 'waiting',
         polling: true,
@@ -509,6 +541,51 @@ export function OAuthPage() {
     }
   };
 
+  const submitMagicLink = async (provider: string) => {
+    const magicLink = (states[provider]?.magicLink || '').trim();
+    if (!magicLink) {
+      showNotification(t('auth_login.anthropic_magic_link_required'), 'warning');
+      return;
+    }
+    const state = states[provider]?.state?.trim();
+    if (!state) {
+      showNotification(t('auth_login.missing_state'), 'warning');
+      return;
+    }
+
+    updateProviderState(provider, {
+      magicLinkSubmitting: true,
+      magicLinkStatus: undefined,
+      magicLinkError: undefined,
+    });
+    try {
+      await oauthApi.submitMagicLink(state, magicLink);
+      updateProviderState(provider, {
+        magicLink: '',
+        magicLinkSubmitting: false,
+        magicLinkStatus: 'success',
+      });
+      showNotification(t('auth_login.anthropic_magic_link_success'), 'success');
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      const message = getErrorMessage(err);
+      const errorMessage =
+        status === 404
+          ? t('auth_login.anthropic_magic_link_upgrade_hint')
+          : message || undefined;
+      updateProviderState(provider, {
+        magicLink: '',
+        magicLinkSubmitting: false,
+        magicLinkStatus: 'error',
+        magicLinkError: errorMessage,
+      });
+      const notificationMessage = errorMessage
+        ? `${t('auth_login.anthropic_magic_link_error')} ${errorMessage}`
+        : t('auth_login.anthropic_magic_link_error');
+      showNotification(notificationMessage, 'error');
+    }
+  };
+
   const handleVertexFilePick = () => {
     vertexFileInputRef.current?.click();
   };
@@ -571,8 +648,11 @@ export function OAuthPage() {
   const renderOAuthProviderCard = (provider: OAuthProviderCard, featured = false) => {
     const state = states[provider.id] || {};
     const showKimiSignUp = featured && provider.kind === 'builtin' && provider.id === 'kimi';
+    const isMagicLinkFlow = isClaudeDesktopMagicLinkFlow(provider, state);
     const canSubmitCallback =
-      (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) && Boolean(state.url);
+      !isMagicLinkFlow &&
+      (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) &&
+      Boolean(state.url);
     const loginButtonLabel =
       state.status === 'success'
         ? t('auth_login.login_another_account')
@@ -689,6 +769,50 @@ export function OAuthPage() {
               {state.callbackStatus === 'error' && (
                 <div className="status-badge error">
                   {t('auth_login.oauth_callback_status_error')} {state.callbackError || ''}
+                </div>
+              )}
+            </div>
+          )}
+          {isMagicLinkFlow && (
+            <div className={styles.magicLinkSection}>
+              <div className={styles.magicLinkNotice}>
+                {t('auth_login.anthropic_magic_link_hint')}
+              </div>
+              <Input
+                label={t('auth_login.anthropic_magic_link_label')}
+                value={state.magicLink || ''}
+                onChange={(e) =>
+                  updateProviderState(provider.id, {
+                    magicLink: e.target.value,
+                    magicLinkStatus: undefined,
+                    magicLinkError: undefined,
+                  })
+                }
+                placeholder={t('auth_login.anthropic_magic_link_placeholder')}
+                type="password"
+                inputMode="url"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              <div className={styles.callbackActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => submitMagicLink(provider.id)}
+                  loading={state.magicLinkSubmitting}
+                >
+                  {t('auth_login.anthropic_magic_link_button')}
+                </Button>
+              </div>
+              {state.magicLinkStatus === 'success' && state.status === 'waiting' && (
+                <div className="status-badge success">
+                  {t('auth_login.anthropic_magic_link_status_success')}
+                </div>
+              )}
+              {state.magicLinkStatus === 'error' && (
+                <div className="status-badge error">
+                  {t('auth_login.anthropic_magic_link_status_error')} {state.magicLinkError || ''}
                 </div>
               )}
             </div>

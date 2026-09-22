@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,10 @@ import { LiveWire } from './components/LiveWire';
 import { Meter } from './components/Meter';
 import { Sparkline } from './components/Sparkline';
 import { ThroughputChart } from './components/ThroughputChart';
+import { ClaudeDesktopTelemetryPanel } from './components/ClaudeDesktopTelemetryPanel';
+import { useClaudeDesktopTelemetry } from './hooks/useClaudeDesktopTelemetry';
+import { ClaudeDesktopRuntimePanel } from './components/ClaudeDesktopRuntimePanel';
+import { useClaudeDesktopRuntimes } from './hooks/useClaudeDesktopRuntimes';
 import { useCountUp, useRevealGroup, useRevealOnScroll } from '@/hooks/motion';
 import { providerLabel, splitWindowMinutes, toneForSuccessRate, type MeterTone } from './utils';
 import styles from './dashboard.module.scss';
@@ -40,8 +44,43 @@ export function DashboardPage() {
   const serverVersion = useAuthStore((state) => state.serverVersion);
   const serverBuildDate = useAuthStore((state) => state.serverBuildDate);
 
-  const { connectionStatus, connected, config, counts, traffic, providers, credentials, refresh } =
-    useDashboardOverview();
+  const {
+    connectionStatus,
+    connected,
+    config,
+    counts,
+    traffic,
+    providers,
+    credentials,
+    refresh: refreshOverview,
+  } = useDashboardOverview();
+  const {
+    data: desktopTelemetryData,
+    error: desktopTelemetryError,
+    loading: desktopTelemetryLoading,
+    supported: desktopTelemetrySupported,
+    operation: desktopTelemetryOperation,
+    refresh: refreshDesktopTelemetry,
+    flush: flushDesktopTelemetry,
+    retryDeadLetters: retryDesktopTelemetryDeadLetters,
+  } = useClaudeDesktopTelemetry(connected);
+  const {
+    data: desktopRuntimeData,
+    error: desktopRuntimeError,
+    loading: desktopRuntimeLoading,
+    supported: desktopRuntimeSupported,
+    operation: desktopRuntimeOperation,
+    refresh: refreshDesktopRuntimes,
+    promote: promoteDesktopRuntime,
+    rollback: rollbackDesktopRuntime,
+  } = useClaudeDesktopRuntimes(connected);
+  const refresh = useCallback(async () => {
+    await Promise.allSettled([
+      refreshOverview(),
+      refreshDesktopTelemetry(),
+      refreshDesktopRuntimes(),
+    ]);
+  }, [refreshOverview, refreshDesktopTelemetry, refreshDesktopRuntimes]);
 
   useHeaderRefresh(refresh, connected);
 
@@ -516,6 +555,30 @@ export function DashboardPage() {
           </Link>
         </div>
       </section>
+
+      {desktopRuntimeSupported && (
+        <ClaudeDesktopRuntimePanel
+          data={desktopRuntimeData}
+          error={desktopRuntimeError}
+          loading={desktopRuntimeLoading}
+          operation={desktopRuntimeOperation}
+          onRefresh={refreshDesktopRuntimes}
+          onPromote={promoteDesktopRuntime}
+          onRollback={rollbackDesktopRuntime}
+        />
+      )}
+
+      {desktopTelemetrySupported && (
+        <ClaudeDesktopTelemetryPanel
+          data={desktopTelemetryData}
+          error={desktopTelemetryError}
+          loading={desktopTelemetryLoading}
+          operation={desktopTelemetryOperation}
+          onRefresh={refreshDesktopTelemetry}
+          onFlush={flushDesktopTelemetry}
+          onRetryDeadLetters={retryDesktopTelemetryDeadLetters}
+        />
+      )}
 
       {/* ---------- CTA ---------- */}
       <section className={styles.section} ref={ctaRef}>

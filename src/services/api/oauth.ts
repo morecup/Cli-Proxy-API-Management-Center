@@ -11,8 +11,10 @@ import {
 export type BuiltInOAuthProvider = 'codex' | 'anthropic' | 'antigravity' | 'kimi' | 'xai';
 
 export interface OAuthStartResponse {
-  url: string;
+  url?: string;
   state?: string;
+  flow?: string;
+  login_url?: string;
 }
 
 export interface OAuthCallbackResponse {
@@ -53,4 +55,11 @@ export const oauthApi = {
       redirect_url: redirectUrl,
     });
   },
+
+  submitMagicLink: (state: string, magicLink: string) =>
+    apiClient.post<OAuthCallbackResponse>('/oauth-callback', {
+      provider: 'anthropic',
+      state,
+      magic_link: magicLink,
+    }),
 };
