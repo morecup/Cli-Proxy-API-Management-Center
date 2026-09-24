@@ -41,6 +41,10 @@ interface ProviderState {
   magicLinkSubmitting?: boolean;
   magicLinkStatus?: 'success' | 'error';
   magicLinkError?: string;
+  sessionKey?: string;
+  sessionKeySubmitting?: boolean;
+  sessionKeyStatus?: 'success' | 'error';
+  sessionKeyError?: string;
 }
 
 interface VertexImportResult {
@@ -397,6 +401,10 @@ export function OAuthPage() {
       magicLinkSubmitting: false,
       magicLinkStatus: undefined,
       magicLinkError: undefined,
+      sessionKey: '',
+      sessionKeySubmitting: false,
+      sessionKeyStatus: undefined,
+      sessionKeyError: undefined,
     });
     successResetTimers.current[provider] = window.setTimeout(() => {
       resetProviderAttempt(provider);
@@ -460,6 +468,10 @@ export function OAuthPage() {
       magicLinkSubmitting: false,
       magicLinkStatus: undefined,
       magicLinkError: undefined,
+      sessionKey: '',
+      sessionKeySubmitting: false,
+      sessionKeyStatus: undefined,
+      sessionKeyError: undefined,
     });
     try {
       const res = await oauthApi.startAuth(provider);
@@ -611,6 +623,56 @@ export function OAuthPage() {
     }
   };
 
+  const submitClaudeSessionKey = async (provider: string) => {
+    const sessionKey = (states[provider]?.sessionKey || '').trim();
+    if (!sessionKey) {
+      showNotification(t('auth_login.anthropic_session_key_required'), 'warning');
+      return;
+    }
+
+    clearProviderTimers(provider);
+    setClaudeVerification({ open: false });
+    updateProviderState(provider, {
+      sessionKeySubmitting: true,
+      sessionKeyStatus: undefined,
+      sessionKeyError: undefined,
+      status: 'waiting',
+      polling: false,
+      error: undefined,
+    });
+    try {
+      const res = await oauthApi.importClaudeSessionKey(sessionKey);
+      if (!res.state) {
+        throw new Error(t('auth_login.missing_state'));
+      }
+      updateProviderState(provider, {
+        sessionKey: '',
+        sessionKeySubmitting: false,
+        sessionKeyStatus: 'success',
+        state: res.state,
+        flow: res.flow,
+        status: 'waiting',
+        polling: true,
+      });
+      startPolling(provider, res.state);
+      showNotification(t('auth_login.anthropic_session_key_started'), 'success');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      updateProviderState(provider, {
+        sessionKey: '',
+        sessionKeySubmitting: false,
+        sessionKeyStatus: 'error',
+        sessionKeyError: message || undefined,
+        status: undefined,
+        polling: false,
+      });
+      showNotification(
+        `${t('auth_login.anthropic_session_key_error')}${message ? ` ${message}` : ''}`,
+        'error'
+      );
+    }
+  };
+
   const handleVertexFilePick = () => {
     vertexFileInputRef.current?.click();
   };
@@ -674,6 +736,7 @@ export function OAuthPage() {
     const state = states[provider.id] || {};
     const showKimiSignUp = featured && provider.kind === 'builtin' && provider.id === 'kimi';
     const isMagicLinkFlow = isClaudeDesktopMagicLinkFlow(provider, state);
+    const isClaudeDesktop = provider.kind === 'builtin' && provider.id === 'anthropic';
     const canSubmitCallback =
       !isMagicLinkFlow &&
       (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) &&
@@ -729,6 +792,49 @@ export function OAuthPage() {
           <div className={featured ? styles.featuredHint : styles.cardHint}>
             {getProviderText(provider, 'oauth_hint')}
           </div>
+          {isClaudeDesktop && (
+            <div className={styles.sessionKeySection}>
+              <div className={styles.sessionKeyNotice}>
+                {t('auth_login.anthropic_session_key_hint')}
+              </div>
+              <Input
+                label={t('auth_login.anthropic_session_key_label')}
+                value={state.sessionKey || ''}
+                onChange={(e) =>
+                  updateProviderState(provider.id, {
+                    sessionKey: e.target.value,
+                    sessionKeyStatus: undefined,
+                    sessionKeyError: undefined,
+                  })
+                }
+                placeholder={t('auth_login.anthropic_session_key_placeholder')}
+                type="password"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              <div className={styles.callbackActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => submitClaudeSessionKey(provider.id)}
+                  loading={state.sessionKeySubmitting}
+                >
+                  {t('auth_login.anthropic_session_key_button')}
+                </Button>
+              </div>
+              {state.sessionKeyStatus === 'success' && state.status === 'waiting' && (
+                <div className="status-badge success">
+                  {t('auth_login.anthropic_session_key_status_waiting')}
+                </div>
+              )}
+              {state.sessionKeyStatus === 'error' && (
+                <div className="status-badge error">
+                  {t('auth_login.anthropic_session_key_error')} {state.sessionKeyError || ''}
+                </div>
+              )}
+            </div>
+          )}
           {state.url && (
             <div className={styles.authUrlBox}>
               <div className={styles.authUrlLabel}>

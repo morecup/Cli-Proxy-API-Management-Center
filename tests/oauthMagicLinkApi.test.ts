@@ -62,4 +62,26 @@ describe('Claude Desktop magic-link API', () => {
       },
     ]);
   });
+
+  test('imports a sessionKey only in the authenticated management request body', async () => {
+    const calls: Array<{ url: string; data?: unknown }> = [];
+    apiClient.post = (async (url: string, data?: unknown) => {
+      calls.push({ url, data });
+      return { status: 'ok', state: 'session-import-state', flow: 'session_key' };
+    }) as typeof apiClient.post;
+
+    const response = await oauthApi.importClaudeSessionKey('sk-ant-sid-user-session');
+
+    expect(calls).toEqual([
+      {
+        url: '/claude-desktop/session-key',
+        data: { session_key: 'sk-ant-sid-user-session' },
+      },
+    ]);
+    expect(response).toEqual({
+      status: 'ok',
+      state: 'session-import-state',
+      flow: 'session_key',
+    });
+  });
 });

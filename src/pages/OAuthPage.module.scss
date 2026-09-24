@@ -223,6 +223,22 @@
   gap: $spacing-sm;
 }
 
+.sessionKeySection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border: 1px solid color-mix(in srgb, #16a34a 38%, var(--border-color));
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #16a34a 6%, var(--bg-secondary));
+}
+
+.sessionKeyNotice {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .magicLinkSection {
   display: flex;
   flex-direction: column;

@@ -27,6 +27,12 @@ export interface OAuthBrowserTicketResponse {
   expires_in: number;
 }
 
+export interface ClaudeSessionImportResponse {
+  status: 'ok';
+  state: string;
+  flow: 'session_key';
+}
+
 const WEBUI_SUPPORTED = new Set<string>(['codex', 'anthropic', 'antigravity', 'xai']);
 
 const normalizeProviderForManagementPath = (provider: string): string => {
@@ -67,6 +73,11 @@ export const oauthApi = {
       provider: 'anthropic',
       state,
       magic_link: magicLink,
+    }),
+
+  importClaudeSessionKey: (sessionKey: string) =>
+    apiClient.post<ClaudeSessionImportResponse>('/claude-desktop/session-key', {
+      session_key: sessionKey,
     }),
 
   createClaudeBrowserTicket: (state: string) =>
