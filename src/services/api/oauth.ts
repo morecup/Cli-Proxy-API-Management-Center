@@ -21,6 +21,12 @@ export interface OAuthCallbackResponse {
   status: 'ok';
 }
 
+export interface OAuthBrowserTicketResponse {
+  status: 'ok';
+  ticket: string;
+  expires_in: number;
+}
+
 const WEBUI_SUPPORTED = new Set<string>(['codex', 'anthropic', 'antigravity', 'xai']);
 
 const normalizeProviderForManagementPath = (provider: string): string => {
@@ -62,4 +68,9 @@ export const oauthApi = {
       state,
       magic_link: magicLink,
     }),
+
+  createClaudeBrowserTicket: (state: string) =>
+    apiClient.post<OAuthBrowserTicketResponse>(
+      `/oauth-session/${encodeURIComponent(state)}/browser-ticket`
+    ),
 };

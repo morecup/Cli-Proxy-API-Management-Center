@@ -23,6 +23,7 @@ import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import iconGrok from '@/assets/icons/grok.svg';
 import iconGrokDark from '@/assets/icons/grok-dark.svg';
+import { ClaudeBrowserVerificationModal } from './ClaudeBrowserVerificationModal';
 
 interface ProviderState {
   url?: string;
@@ -261,7 +262,12 @@ export function OAuthPage() {
     location: '',
     loading: false,
   });
+  const [claudeVerification, setClaudeVerification] = useState<{
+    open: boolean;
+    state?: string;
+  }>({ open: false });
   const pollingTimers = useRef<Partial<Record<string, number>>>({});
+  const pollingStates = useRef<Partial<Record<string, string>>>({});
   const successResetTimers = useRef<Partial<Record<string, number>>>({});
   const vertexFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -273,6 +279,7 @@ export function OAuthPage() {
       if (timer !== undefined) window.clearTimeout(timer);
     });
     pollingTimers.current = {};
+    pollingStates.current = {};
     successResetTimers.current = {};
   }, []);
 
@@ -338,6 +345,7 @@ export function OAuthPage() {
       window.clearInterval(timer);
       delete pollingTimers.current[provider];
     }
+    delete pollingStates.current[provider];
   };
 
   const clearSuccessResetTimer = (provider: string) => {
@@ -355,6 +363,9 @@ export function OAuthPage() {
 
   const resetProviderAttempt = (provider: string) => {
     clearProviderTimers(provider);
+    if (provider === 'anthropic') {
+      setClaudeVerification({ open: false });
+    }
     setStates((prev) => {
       return {
         ...prev,
@@ -367,6 +378,9 @@ export function OAuthPage() {
     clearPollingTimer(provider);
     clearSuccessResetTimer(provider);
     notifyAuthFilesChanged();
+    if (provider === 'anthropic') {
+      setClaudeVerification({ open: false });
+    }
     updateProviderState(provider, {
       url: undefined,
       flow: undefined,
@@ -391,36 +405,48 @@ export function OAuthPage() {
 
   const startPolling = (provider: string, state: string) => {
     clearPollingTimer(provider);
-    const timer = window.setInterval(async () => {
+    pollingStates.current[provider] = state;
+    const checkStatus = async () => {
       try {
         const res = await oauthApi.getAuthStatus(state);
+        if (pollingStates.current[provider] !== state) return;
         if (res.status === 'ok') {
           completeProviderAuth(provider);
           showNotification(getProviderTextByID(provider, 'oauth_status_success'), 'success');
         } else if (res.status === 'error') {
           updateProviderState(provider, { status: 'error', error: res.error, polling: false });
+          if (provider === 'anthropic') {
+            setClaudeVerification({ open: false });
+          }
           showNotification(
             `${getProviderTextByID(provider, 'oauth_status_error')} ${res.error || ''}`,
             'error'
           );
-          window.clearInterval(timer);
-          delete pollingTimers.current[provider];
+          clearPollingTimer(provider);
         }
       } catch (err: unknown) {
+        if (pollingStates.current[provider] !== state) return;
         updateProviderState(provider, {
           status: 'error',
           error: getErrorMessage(err),
           polling: false,
         });
-        window.clearInterval(timer);
-        delete pollingTimers.current[provider];
+        if (provider === 'anthropic') {
+          setClaudeVerification({ open: false });
+        }
+        clearPollingTimer(provider);
       }
-    }, 3000);
+    };
+    const timer = window.setInterval(() => void checkStatus(), 1500);
     pollingTimers.current[provider] = timer;
+    void checkStatus();
   };
 
   const startAuth = async (provider: string) => {
     clearProviderTimers(provider);
+    if (provider === 'anthropic') {
+      setClaudeVerification({ open: false });
+    }
     updateProviderState(provider, {
       url: undefined,
       state: undefined,
@@ -565,14 +591,13 @@ export function OAuthPage() {
         magicLinkSubmitting: false,
         magicLinkStatus: 'success',
       });
+      setClaudeVerification({ open: true, state });
       showNotification(t('auth_login.anthropic_magic_link_success'), 'success');
     } catch (err: unknown) {
       const status = getErrorStatus(err);
       const message = getErrorMessage(err);
       const errorMessage =
-        status === 404
-          ? t('auth_login.anthropic_magic_link_upgrade_hint')
-          : message || undefined;
+        status === 404 ? t('auth_login.anthropic_magic_link_upgrade_hint') : message || undefined;
       updateProviderState(provider, {
         magicLink: '',
         magicLinkSubmitting: false,
@@ -806,8 +831,19 @@ export function OAuthPage() {
                 </Button>
               </div>
               {state.magicLinkStatus === 'success' && state.status === 'waiting' && (
-                <div className="status-badge success">
-                  {t('auth_login.anthropic_magic_link_status_success')}
+                <div className={styles.magicLinkSubmittedRow}>
+                  <div className="status-badge success">
+                    {t('auth_login.anthropic_magic_link_status_success')}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      setClaudeVerification({ open: true, state: state.state?.trim() })
+                    }
+                  >
+                    {t('auth_login.anthropic_browser_open_button')}
+                  </Button>
                 </div>
               )}
               {state.magicLinkStatus === 'error' && (
@@ -953,6 +989,12 @@ export function OAuthPage() {
           </Card>
         </section>
       </div>
+      <ClaudeBrowserVerificationModal
+        open={claudeVerification.open}
+        oauthState={claudeVerification.state}
+        apiBase={apiBase}
+        onClose={() => setClaudeVerification((current) => ({ ...current, open: false }))}
+      />
     </div>
   );
 }

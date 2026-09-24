@@ -239,6 +239,13 @@
   line-height: 1.6;
 }
 
+.magicLinkSubmittedRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
 .callbackActions {
   display: flex;
   gap: $spacing-md;
