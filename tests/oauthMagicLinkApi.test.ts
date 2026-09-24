@@ -63,6 +63,24 @@ describe('Claude Desktop magic-link API', () => {
     ]);
   });
 
+  test('starts Claude login with the account proxy in the authenticated request body', async () => {
+    const calls: Array<{ url: string; data?: unknown; params?: unknown }> = [];
+    apiClient.post = (async (url: string, data?: unknown, config?: { params?: unknown }) => {
+      calls.push({ url, data, params: config?.params });
+      return { status: 'ok', state: 'desktop-proxy-state', flow: 'magic_link' };
+    }) as typeof apiClient.post;
+
+    await oauthApi.startAuth('anthropic', ' socks5h://user:password@1.2.3.4:1080 ');
+
+    expect(calls).toEqual([
+      {
+        url: '/anthropic-auth-url',
+        data: { proxy_url: 'socks5h://user:password@1.2.3.4:1080' },
+        params: { is_webui: true },
+      },
+    ]);
+  });
+
   test('imports a sessionKey only in the authenticated management request body', async () => {
     const calls: Array<{ url: string; data?: unknown }> = [];
     apiClient.post = (async (url: string, data?: unknown) => {
@@ -70,12 +88,18 @@ describe('Claude Desktop magic-link API', () => {
       return { status: 'ok', state: 'session-import-state', flow: 'session_key' };
     }) as typeof apiClient.post;
 
-    const response = await oauthApi.importClaudeSessionKey('sk-ant-sid-user-session');
+    const response = await oauthApi.importClaudeSessionKey(
+      'sk-ant-sid-user-session',
+      'http://proxy.example.test:8080'
+    );
 
     expect(calls).toEqual([
       {
         url: '/claude-desktop/session-key',
-        data: { session_key: 'sk-ant-sid-user-session' },
+        data: {
+          session_key: 'sk-ant-sid-user-session',
+          proxy_url: 'http://proxy.example.test:8080',
+        },
       },
     ]);
     expect(response).toEqual({

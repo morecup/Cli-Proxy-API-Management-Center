@@ -223,6 +223,22 @@
   gap: $spacing-sm;
 }
 
+.claudeProxySection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border: 1px solid color-mix(in srgb, #f97316 38%, var(--border-color));
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #f97316 6%, var(--bg-secondary));
+}
+
+.claudeProxyNotice {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .sessionKeySection {
   display: flex;
   flex-direction: column;

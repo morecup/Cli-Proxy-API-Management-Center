@@ -44,11 +44,19 @@ const normalizeProviderForManagementPath = (provider: string): string => {
 };
 
 export const oauthApi = {
-  startAuth: (provider: string) => {
+  startAuth: (provider: string, proxyUrl?: string) => {
     const providerKey = normalizeProviderForManagementPath(provider);
     const params: Record<string, string | boolean> = {};
     if (WEBUI_SUPPORTED.has(providerKey)) {
       params.is_webui = true;
+    }
+    const normalizedProxyUrl = proxyUrl?.trim();
+    if (providerKey === 'anthropic' && normalizedProxyUrl) {
+      return apiClient.post<OAuthStartResponse>(
+        `/${providerKey}-auth-url`,
+        { proxy_url: normalizedProxyUrl },
+        { params }
+      );
     }
     return apiClient.get<OAuthStartResponse>(`/${providerKey}-auth-url`, {
       params: Object.keys(params).length ? params : undefined,
@@ -75,10 +83,14 @@ export const oauthApi = {
       magic_link: magicLink,
     }),
 
-  importClaudeSessionKey: (sessionKey: string) =>
-    apiClient.post<ClaudeSessionImportResponse>('/claude-desktop/session-key', {
-      session_key: sessionKey,
-    }),
+  importClaudeSessionKey: (sessionKey: string, proxyUrl?: string) => {
+    const payload: { session_key: string; proxy_url?: string } = { session_key: sessionKey };
+    const normalizedProxyUrl = proxyUrl?.trim();
+    if (normalizedProxyUrl) {
+      payload.proxy_url = normalizedProxyUrl;
+    }
+    return apiClient.post<ClaudeSessionImportResponse>('/claude-desktop/session-key', payload);
+  },
 
   createClaudeBrowserTicket: (state: string) =>
     apiClient.post<OAuthBrowserTicketResponse>(

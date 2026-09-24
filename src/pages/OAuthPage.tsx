@@ -41,6 +41,7 @@ interface ProviderState {
   magicLinkSubmitting?: boolean;
   magicLinkStatus?: 'success' | 'error';
   magicLinkError?: string;
+  proxyUrl?: string;
   sessionKey?: string;
   sessionKeySubmitting?: boolean;
   sessionKeyStatus?: 'success' | 'error';
@@ -451,6 +452,8 @@ export function OAuthPage() {
   };
 
   const startAuth = async (provider: string) => {
+    const proxyUrl =
+      provider === 'anthropic' ? (states[provider]?.proxyUrl || '').trim() : undefined;
     clearProviderTimers(provider);
     if (provider === 'anthropic') {
       setClaudeVerification({ open: false });
@@ -474,7 +477,7 @@ export function OAuthPage() {
       sessionKeyError: undefined,
     });
     try {
-      const res = await oauthApi.startAuth(provider);
+      const res = await oauthApi.startAuth(provider, proxyUrl);
       const requiresMagicLink = provider === 'anthropic';
       if (requiresMagicLink && res.flow !== 'magic_link') {
         const message = t('auth_login.anthropic_magic_link_upgrade_hint');
@@ -625,6 +628,7 @@ export function OAuthPage() {
 
   const submitClaudeSessionKey = async (provider: string) => {
     const sessionKey = (states[provider]?.sessionKey || '').trim();
+    const proxyUrl = (states[provider]?.proxyUrl || '').trim();
     if (!sessionKey) {
       showNotification(t('auth_login.anthropic_session_key_required'), 'warning');
       return;
@@ -641,7 +645,7 @@ export function OAuthPage() {
       error: undefined,
     });
     try {
-      const res = await oauthApi.importClaudeSessionKey(sessionKey);
+      const res = await oauthApi.importClaudeSessionKey(sessionKey, proxyUrl);
       if (!res.state) {
         throw new Error(t('auth_login.missing_state'));
       }
@@ -792,6 +796,23 @@ export function OAuthPage() {
           <div className={featured ? styles.featuredHint : styles.cardHint}>
             {getProviderText(provider, 'oauth_hint')}
           </div>
+          {isClaudeDesktop && (
+            <div className={styles.claudeProxySection}>
+              <div className={styles.claudeProxyNotice}>
+                {t('auth_login.anthropic_proxy_url_hint')}
+              </div>
+              <Input
+                label={t('auth_login.anthropic_proxy_url_label')}
+                value={state.proxyUrl || ''}
+                onChange={(e) => updateProviderState(provider.id, { proxyUrl: e.target.value })}
+                placeholder={t('auth_login.anthropic_proxy_url_placeholder')}
+                disabled={Boolean(state.polling || state.sessionKeySubmitting)}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+          )}
           {isClaudeDesktop && (
             <div className={styles.sessionKeySection}>
               <div className={styles.sessionKeyNotice}>
