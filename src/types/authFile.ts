@@ -19,6 +19,24 @@ export type AuthFileType =
   | 'empty'
   | 'unknown';
 
+export type CredentialHealthState =
+  | 'credential_revoked'
+  | 'account_disabled'
+  | 'organization_disabled'
+  | 'authentication_failed'
+  | 'permission_denied'
+  | 'rate_limited';
+
+export interface CredentialHealth {
+  state: CredentialHealthState;
+  message: string;
+  httpStatus: number;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  resolvedAt?: string;
+  source: 'upstream_response' | 'historical_log';
+}
+
 export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
@@ -39,6 +57,9 @@ export interface AuthFileItem {
   unavailable?: boolean;
   status?: string;
   statusMessage?: string;
+  credentialHealth?: CredentialHealth;
+  runtimeState?: string;
+  runtimeMessage?: string;
   lastRefresh?: string | number;
   modified?: number;
   priority?: number;

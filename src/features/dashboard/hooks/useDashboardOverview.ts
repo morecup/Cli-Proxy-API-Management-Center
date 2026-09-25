@@ -10,6 +10,7 @@ import {
 } from '@/utils/recentRequests';
 import type { Config } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
+import { getAuthFileHealthState } from '@/features/authFiles/health';
 import {
   TRAFFIC_BUCKET_MINUTES,
   type CredentialHealth,
@@ -261,7 +262,7 @@ export function useDashboardOverview() {
     authFiles.forEach((file) => {
       if (file.disabled) {
         disabled += 1;
-      } else if (file.unavailable) {
+      } else if (getAuthFileHealthState(file)) {
         unavailable += 1;
       }
       const type = providerIdOfAuthFile(file);

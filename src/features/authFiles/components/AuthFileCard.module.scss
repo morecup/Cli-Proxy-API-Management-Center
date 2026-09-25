@@ -171,6 +171,39 @@
   background: var(--bg-tertiary);
 }
 
+.stateProblem {
+  color: var(--viz-failure);
+  border-color: color-mix(in srgb, var(--viz-failure) 40%, transparent);
+  background: color-mix(in srgb, var(--viz-failure) 8%, transparent);
+
+  .stateDot {
+    background: var(--viz-failure);
+  }
+}
+
+.healthNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--warning-border);
+  border-radius: 8px;
+  background: var(--warning-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  p {
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .stateVirtual {
   color: var(--text-secondary);
   border-style: dashed;

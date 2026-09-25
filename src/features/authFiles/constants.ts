@@ -14,6 +14,7 @@ import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { normalizeOAuthProviderKey } from '@/utils/providerKeys';
 import { parseTimestamp } from '@/utils/timestamp';
 import { TYPE_COLORS } from '@/utils/quota';
+import { getAuthFileHealthState } from './health';
 
 export type { ResolvedTheme, ThemeColors, TypeColorSet } from '@/types';
 export type AuthFileModelItem = {
@@ -123,7 +124,10 @@ export const HEALTHY_AUTH_FILE_STATUS_MESSAGES = new Set([
 /** 是否存在非健康的 status_message（卡片告警态 / 谱条琥珀色共用判定）。 */
 export const hasAuthFileStatusWarning = (file: AuthFileItem): boolean => {
   const message = getAuthFileStatusMessage(file);
-  return Boolean(message) && !HEALTHY_AUTH_FILE_STATUS_MESSAGES.has(message.toLowerCase());
+  return (
+    Boolean(getAuthFileHealthState(file)) ||
+    (Boolean(message) && !HEALTHY_AUTH_FILE_STATUS_MESSAGES.has(message.toLowerCase()))
+  );
 };
 
 /**

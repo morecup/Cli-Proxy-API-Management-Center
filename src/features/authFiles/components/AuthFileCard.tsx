@@ -34,6 +34,8 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { deriveAuthFileIdentity } from '@/features/authFiles/identity';
+import { getAuthFileHealthState, isSevereAuthFileHealth } from '../health';
+import { AuthFileHealthNotice } from './AuthFileHealthNotice';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import styles from './AuthFileCard.module.scss';
@@ -114,6 +116,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const rawStatusMessage = getAuthFileStatusMessage(file);
   const hasStatusWarning = hasAuthFileStatusWarning(file);
+  const healthState = getAuthFileHealthState(file);
 
   const priorityValue = Number.isSafeInteger(file.priority) ? file.priority : undefined;
   const weightValue = Number.isSafeInteger(file.weight) ? file.weight : undefined;
@@ -123,20 +126,26 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual')
-    : file.disabled
-      ? t('auth_files.health_status_disabled')
-      : hasStatusWarning
-        ? t('auth_files.health_status_warning')
-        : rawStatusMessage
-          ? t('auth_files.health_status_healthy')
-          : t('auth_files.status_toggle_label');
+    : healthState
+      ? t(`auth_files.observation_state_${healthState}`)
+      : file.disabled
+        ? t('auth_files.health_status_disabled')
+        : hasStatusWarning
+          ? t('auth_files.health_status_warning')
+          : rawStatusMessage
+            ? t('auth_files.health_status_healthy')
+            : t('auth_files.status_toggle_label');
   const stateBadgeClass = isRuntimeOnly
     ? styles.stateVirtual
-    : file.disabled
-      ? styles.stateDisabled
-      : hasStatusWarning
+    : isSevereAuthFileHealth(file)
+      ? styles.stateProblem
+      : healthState
         ? styles.stateWarning
-        : styles.stateActive;
+        : file.disabled
+          ? styles.stateDisabled
+          : hasStatusWarning
+            ? styles.stateWarning
+            : styles.stateActive;
 
   // 挂载时捕获一次入场延迟：父级随后传 null 也不会中断已开始的动画
   const [mountEntranceDelayMs] = useState<number | null>(entranceDelayMs ?? null);
@@ -227,12 +236,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
         </p>
       )}
 
-      {rawStatusMessage && hasStatusWarning && (
-        <div className={styles.warning} title={rawStatusMessage}>
-          <IconInfo className={styles.warningIcon} size={14} />
-          <span>{rawStatusMessage}</span>
-        </div>
-      )}
+      <AuthFileHealthNotice file={file} />
+
+      {(!healthState || healthState === 'unavailable') &&
+        (!file.credentialHealth || file.credentialHealth.resolvedAt) &&
+        rawStatusMessage &&
+        hasStatusWarning && (
+          <div className={styles.warning} title={rawStatusMessage}>
+            <IconInfo className={styles.warningIcon} size={14} />
+            <span>{rawStatusMessage}</span>
+          </div>
+        )}
 
       <div className={styles.health}>
         <div className={styles.healthHead}>
@@ -357,9 +371,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
         </div>
         {!isRuntimeOnly && (
           <div className={styles.toggleWrap}>
-            <span className={styles.toggleLabel}>{t('auth_files.status_toggle_label')}</span>
+            <span className={styles.toggleLabel}>{t('auth_files.credential_enabled_switch')}</span>
             <ToggleSwitch
-              ariaLabel={t('auth_files.status_toggle_label')}
+              ariaLabel={t('auth_files.credential_enabled_switch')}
               checked={!file.disabled}
               disabled={disableControls || statusUpdating[file.name] === true || isManualRefreshing}
               onChange={(value) => onToggleStatus(file, value)}

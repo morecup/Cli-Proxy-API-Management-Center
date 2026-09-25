@@ -12,6 +12,7 @@ import {
   normalizeUsageTotal,
 } from '@/utils/recentRequests';
 import { parseTimestampMs } from '@/utils/timestamp';
+import { normalizeCredentialHealth } from '@/features/authFiles/health';
 
 type StatusError = { status?: number };
 type AuthFileStatusResponse = { status: string; disabled: boolean };
@@ -256,6 +257,9 @@ const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
   return {
     ...entry,
     runtimeOnly: readRuntimeOnlyField(entry),
+    credentialHealth: normalizeCredentialHealth(entry.credential_health ?? entry.credentialHealth),
+    runtimeState: readTextField(entry, 'runtime_state') || entry.runtimeState,
+    runtimeMessage: readTextField(entry, 'runtime_message') || entry.runtimeMessage,
     authIndex: normalizeRecentRequestAuthIndex(entry['auth_index'] ?? entry.authIndex),
     recentRequests: normalizeRecentRequestBuckets(entry.recent_requests ?? entry.recentRequests),
     successCount: normalizeUsageTotal(entry.success),

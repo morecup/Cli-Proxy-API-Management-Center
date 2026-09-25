@@ -1,6 +1,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import type { AuthFileItem } from '@/types';
 import { hasAuthFileStatusWarning } from '@/features/authFiles/constants';
+import { isSevereAuthFileHealth } from '../health';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import styles from './VaultPulse.module.scss';
 
@@ -44,7 +45,7 @@ export function VaultPulse({ files, statusBarCache }: VaultPulseProps) {
       files.slice(0, MAX_BARS).map((file) => {
         const disabled = file.disabled === true;
         let state: PulseState;
-        if (file.unavailable === true) {
+        if (file.unavailable === true || isSevereAuthFileHealth(file)) {
           state = 'problem';
         } else if (hasAuthFileStatusWarning(file)) {
           state = 'warning';
