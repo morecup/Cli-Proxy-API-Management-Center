@@ -166,6 +166,42 @@
   color: var(--text-secondary);
 }
 
+.claudeMethods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+
+  > button {
+    flex: 1 1 180px;
+  }
+}
+
+.claudeSteps {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 13px;
+  line-height: 1.7;
+  li + li {
+    margin-top: $spacing-sm;
+  }
+}
+
+.claudeProgress {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  :global(.status-badge) {
+    white-space: normal;
+    line-height: 1.6;
+  }
+}
+
+.claudeError {
+  overflow-wrap: anywhere;
+  color: var(--error-color, #dc2626);
+  font-size: 13px;
+}
+
 .cardHintSecondary {
   margin: 0;
   font-size: 12px;

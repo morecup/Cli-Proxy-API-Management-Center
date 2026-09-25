@@ -4,13 +4,24 @@ import { oauthApi } from '../src/services/api/oauth';
 
 const originalGet = apiClient.get;
 const originalPost = apiClient.post;
+const originalDelete = apiClient.delete;
 
 afterEach(() => {
   apiClient.get = originalGet;
   apiClient.post = originalPost;
+  apiClient.delete = originalDelete;
 });
 
 describe('Claude Desktop magic-link API', () => {
+  test('cancels the exact pending server session', async () => {
+    const calls: unknown[] = [];
+    apiClient.delete = (async (url, config) => {
+      calls.push({ url, params: config?.params });
+      return { status: 'ok', cancelled: true };
+    }) as typeof apiClient.delete;
+    expect(await oauthApi.cancelAuthSession('pending')).toEqual({ status: 'ok', cancelled: true });
+    expect(calls).toEqual([{ url: '/oauth-session', params: { state: 'pending' } }]);
+  });
   test('requests the Web UI flow and preserves the magic-link response fields', async () => {
     const calls: Array<{ url: string; params?: unknown }> = [];
     apiClient.get = (async (url: string, config?: { params?: unknown }) => {

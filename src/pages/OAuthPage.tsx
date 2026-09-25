@@ -23,7 +23,7 @@ import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import iconGrok from '@/assets/icons/grok.svg';
 import iconGrokDark from '@/assets/icons/grok-dark.svg';
-import { ClaudeBrowserVerificationModal } from './ClaudeBrowserVerificationModal';
+import { ClaudeDesktopAuth } from './ClaudeDesktopAuth';
 
 interface ProviderState {
   url?: string;
@@ -37,15 +37,6 @@ interface ProviderState {
   callbackSubmitting?: boolean;
   callbackStatus?: 'success' | 'error';
   callbackError?: string;
-  magicLink?: string;
-  magicLinkSubmitting?: boolean;
-  magicLinkStatus?: 'success' | 'error';
-  magicLinkError?: string;
-  proxyUrl?: string;
-  sessionKey?: string;
-  sessionKeySubmitting?: boolean;
-  sessionKeyStatus?: 'success' | 'error';
-  sessionKeyError?: string;
 }
 
 interface VertexImportResult {
@@ -251,9 +242,6 @@ const resolveCallbackUrl = (provider: string, input: string, state?: string): st
   return buildXaiCallbackUrl(input, state);
 };
 
-const isClaudeDesktopMagicLinkFlow = (provider: OAuthProviderCard, state: ProviderState) =>
-  provider.kind === 'builtin' && provider.id === 'anthropic' && state.flow === 'magic_link';
-
 export function OAuthPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -267,10 +255,6 @@ export function OAuthPage() {
     location: '',
     loading: false,
   });
-  const [claudeVerification, setClaudeVerification] = useState<{
-    open: boolean;
-    state?: string;
-  }>({ open: false });
   const pollingTimers = useRef<Partial<Record<string, number>>>({});
   const pollingStates = useRef<Partial<Record<string, string>>>({});
   const successResetTimers = useRef<Partial<Record<string, number>>>({});
@@ -368,9 +352,6 @@ export function OAuthPage() {
 
   const resetProviderAttempt = (provider: string) => {
     clearProviderTimers(provider);
-    if (provider === 'anthropic') {
-      setClaudeVerification({ open: false });
-    }
     setStates((prev) => {
       return {
         ...prev,
@@ -383,9 +364,6 @@ export function OAuthPage() {
     clearPollingTimer(provider);
     clearSuccessResetTimer(provider);
     notifyAuthFilesChanged();
-    if (provider === 'anthropic') {
-      setClaudeVerification({ open: false });
-    }
     updateProviderState(provider, {
       url: undefined,
       flow: undefined,
@@ -398,14 +376,6 @@ export function OAuthPage() {
       callbackSubmitting: false,
       callbackStatus: undefined,
       callbackError: undefined,
-      magicLink: '',
-      magicLinkSubmitting: false,
-      magicLinkStatus: undefined,
-      magicLinkError: undefined,
-      sessionKey: '',
-      sessionKeySubmitting: false,
-      sessionKeyStatus: undefined,
-      sessionKeyError: undefined,
     });
     successResetTimers.current[provider] = window.setTimeout(() => {
       resetProviderAttempt(provider);
@@ -424,9 +394,6 @@ export function OAuthPage() {
           showNotification(getProviderTextByID(provider, 'oauth_status_success'), 'success');
         } else if (res.status === 'error') {
           updateProviderState(provider, { status: 'error', error: res.error, polling: false });
-          if (provider === 'anthropic') {
-            setClaudeVerification({ open: false });
-          }
           showNotification(
             `${getProviderTextByID(provider, 'oauth_status_error')} ${res.error || ''}`,
             'error'
@@ -440,9 +407,6 @@ export function OAuthPage() {
           error: getErrorMessage(err),
           polling: false,
         });
-        if (provider === 'anthropic') {
-          setClaudeVerification({ open: false });
-        }
         clearPollingTimer(provider);
       }
     };
@@ -452,12 +416,7 @@ export function OAuthPage() {
   };
 
   const startAuth = async (provider: string) => {
-    const proxyUrl =
-      provider === 'anthropic' ? (states[provider]?.proxyUrl || '').trim() : undefined;
     clearProviderTimers(provider);
-    if (provider === 'anthropic') {
-      setClaudeVerification({ open: false });
-    }
     updateProviderState(provider, {
       url: undefined,
       state: undefined,
@@ -467,28 +426,9 @@ export function OAuthPage() {
       callbackStatus: undefined,
       callbackError: undefined,
       callbackUrl: '',
-      magicLink: '',
-      magicLinkSubmitting: false,
-      magicLinkStatus: undefined,
-      magicLinkError: undefined,
-      sessionKey: '',
-      sessionKeySubmitting: false,
-      sessionKeyStatus: undefined,
-      sessionKeyError: undefined,
     });
     try {
-      const res = await oauthApi.startAuth(provider, proxyUrl);
-      const requiresMagicLink = provider === 'anthropic';
-      if (requiresMagicLink && res.flow !== 'magic_link') {
-        const message = t('auth_login.anthropic_magic_link_upgrade_hint');
-        updateProviderState(provider, {
-          status: 'error',
-          error: message,
-          polling: false,
-        });
-        showNotification(message, 'error');
-        return;
-      }
+      const res = await oauthApi.startAuth(provider);
       if (!res.state) {
         const message = t('auth_login.missing_state');
         updateProviderState(provider, {
@@ -582,101 +522,6 @@ export function OAuthPage() {
     }
   };
 
-  const submitMagicLink = async (provider: string) => {
-    const magicLink = (states[provider]?.magicLink || '').trim();
-    if (!magicLink) {
-      showNotification(t('auth_login.anthropic_magic_link_required'), 'warning');
-      return;
-    }
-    const state = states[provider]?.state?.trim();
-    if (!state) {
-      showNotification(t('auth_login.missing_state'), 'warning');
-      return;
-    }
-
-    updateProviderState(provider, {
-      magicLinkSubmitting: true,
-      magicLinkStatus: undefined,
-      magicLinkError: undefined,
-    });
-    try {
-      await oauthApi.submitMagicLink(state, magicLink);
-      updateProviderState(provider, {
-        magicLink: '',
-        magicLinkSubmitting: false,
-        magicLinkStatus: 'success',
-      });
-      setClaudeVerification({ open: true, state });
-      showNotification(t('auth_login.anthropic_magic_link_success'), 'success');
-    } catch (err: unknown) {
-      const status = getErrorStatus(err);
-      const message = getErrorMessage(err);
-      const errorMessage =
-        status === 404 ? t('auth_login.anthropic_magic_link_upgrade_hint') : message || undefined;
-      updateProviderState(provider, {
-        magicLink: '',
-        magicLinkSubmitting: false,
-        magicLinkStatus: 'error',
-        magicLinkError: errorMessage,
-      });
-      const notificationMessage = errorMessage
-        ? `${t('auth_login.anthropic_magic_link_error')} ${errorMessage}`
-        : t('auth_login.anthropic_magic_link_error');
-      showNotification(notificationMessage, 'error');
-    }
-  };
-
-  const submitClaudeSessionKey = async (provider: string) => {
-    const sessionKey = (states[provider]?.sessionKey || '').trim();
-    const proxyUrl = (states[provider]?.proxyUrl || '').trim();
-    if (!sessionKey) {
-      showNotification(t('auth_login.anthropic_session_key_required'), 'warning');
-      return;
-    }
-
-    clearProviderTimers(provider);
-    setClaudeVerification({ open: false });
-    updateProviderState(provider, {
-      sessionKeySubmitting: true,
-      sessionKeyStatus: undefined,
-      sessionKeyError: undefined,
-      status: 'waiting',
-      polling: false,
-      error: undefined,
-    });
-    try {
-      const res = await oauthApi.importClaudeSessionKey(sessionKey, proxyUrl);
-      if (!res.state) {
-        throw new Error(t('auth_login.missing_state'));
-      }
-      updateProviderState(provider, {
-        sessionKey: '',
-        sessionKeySubmitting: false,
-        sessionKeyStatus: 'success',
-        state: res.state,
-        flow: res.flow,
-        status: 'waiting',
-        polling: true,
-      });
-      startPolling(provider, res.state);
-      showNotification(t('auth_login.anthropic_session_key_started'), 'success');
-    } catch (err: unknown) {
-      const message = getErrorMessage(err);
-      updateProviderState(provider, {
-        sessionKey: '',
-        sessionKeySubmitting: false,
-        sessionKeyStatus: 'error',
-        sessionKeyError: message || undefined,
-        status: undefined,
-        polling: false,
-      });
-      showNotification(
-        `${t('auth_login.anthropic_session_key_error')}${message ? ` ${message}` : ''}`,
-        'error'
-      );
-    }
-  };
-
   const handleVertexFilePick = () => {
     vertexFileInputRef.current?.click();
   };
@@ -739,12 +584,9 @@ export function OAuthPage() {
   const renderOAuthProviderCard = (provider: OAuthProviderCard, featured = false) => {
     const state = states[provider.id] || {};
     const showKimiSignUp = featured && provider.kind === 'builtin' && provider.id === 'kimi';
-    const isMagicLinkFlow = isClaudeDesktopMagicLinkFlow(provider, state);
     const isClaudeDesktop = provider.kind === 'builtin' && provider.id === 'anthropic';
     const canSubmitCallback =
-      !isMagicLinkFlow &&
-      (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) &&
-      Boolean(state.url);
+      (provider.kind === 'plugin' || CALLBACK_SUPPORTED.has(provider.id)) && Boolean(state.url);
     const loginButtonLabel =
       state.status === 'success'
         ? t('auth_login.login_another_account')
@@ -768,7 +610,7 @@ export function OAuthPage() {
           </span>
         }
         extra={
-          showKimiSignUp ? (
+          isClaudeDesktop ? undefined : showKimiSignUp ? (
             <div className={styles.featuredActions}>
               <Button
                 onClick={() =>
@@ -792,211 +634,100 @@ export function OAuthPage() {
           )
         }
       >
-        <div className={styles.cardContent}>
-          <div className={featured ? styles.featuredHint : styles.cardHint}>
-            {getProviderText(provider, 'oauth_hint')}
-          </div>
-          {isClaudeDesktop && (
-            <div className={styles.claudeProxySection}>
-              <div className={styles.claudeProxyNotice}>
-                {t('auth_login.anthropic_proxy_url_hint')}
-              </div>
-              <Input
-                label={t('auth_login.anthropic_proxy_url_label')}
-                value={state.proxyUrl || ''}
-                onChange={(e) => updateProviderState(provider.id, { proxyUrl: e.target.value })}
-                placeholder={t('auth_login.anthropic_proxy_url_placeholder')}
-                disabled={Boolean(state.polling || state.sessionKeySubmitting)}
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+        {isClaudeDesktop ? (
+          <ClaudeDesktopAuth />
+        ) : (
+          <div className={styles.cardContent}>
+            <div className={featured ? styles.featuredHint : styles.cardHint}>
+              {getProviderText(provider, 'oauth_hint')}
             </div>
-          )}
-          {isClaudeDesktop && (
-            <div className={styles.sessionKeySection}>
-              <div className={styles.sessionKeyNotice}>
-                {t('auth_login.anthropic_session_key_hint')}
-              </div>
-              <Input
-                label={t('auth_login.anthropic_session_key_label')}
-                value={state.sessionKey || ''}
-                onChange={(e) =>
-                  updateProviderState(provider.id, {
-                    sessionKey: e.target.value,
-                    sessionKeyStatus: undefined,
-                    sessionKeyError: undefined,
-                  })
-                }
-                placeholder={t('auth_login.anthropic_session_key_placeholder')}
-                type="password"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
-              <div className={styles.callbackActions}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => submitClaudeSessionKey(provider.id)}
-                  loading={state.sessionKeySubmitting}
-                >
-                  {t('auth_login.anthropic_session_key_button')}
-                </Button>
-              </div>
-              {state.sessionKeyStatus === 'success' && state.status === 'waiting' && (
-                <div className="status-badge success">
-                  {t('auth_login.anthropic_session_key_status_waiting')}
+            {state.url && (
+              <div className={styles.authUrlBox}>
+                <div className={styles.authUrlLabel}>
+                  {getProviderText(provider, 'oauth_url_label')}
                 </div>
-              )}
-              {state.sessionKeyStatus === 'error' && (
-                <div className="status-badge error">
-                  {t('auth_login.anthropic_session_key_error')} {state.sessionKeyError || ''}
-                </div>
-              )}
-            </div>
-          )}
-          {state.url && (
-            <div className={styles.authUrlBox}>
-              <div className={styles.authUrlLabel}>
-                {getProviderText(provider, 'oauth_url_label')}
-              </div>
-              <div className={styles.authUrlValue}>{state.url}</div>
-              <div className={styles.authUrlActions}>
-                <Button variant="secondary" size="sm" onClick={() => copyLink(state.url!)}>
-                  {getProviderText(provider, 'copy_link')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => window.open(state.url, '_blank', 'noopener,noreferrer')}
-                >
-                  {getProviderText(provider, 'open_link')}
-                </Button>
-              </div>
-            </div>
-          )}
-          {canSubmitCallback && (
-            <div className={styles.callbackSection}>
-              <Input
-                label={t(
-                  provider.id === 'xai'
-                    ? 'auth_login.xai_callback_label'
-                    : 'auth_login.oauth_callback_label'
-                )}
-                hint={t(
-                  provider.id === 'xai'
-                    ? 'auth_login.xai_callback_hint'
-                    : 'auth_login.oauth_callback_hint'
-                )}
-                value={state.callbackUrl || ''}
-                onChange={(e) =>
-                  updateProviderState(provider.id, {
-                    callbackUrl: e.target.value,
-                    callbackStatus: undefined,
-                    callbackError: undefined,
-                  })
-                }
-                placeholder={t(
-                  provider.id === 'xai'
-                    ? 'auth_login.xai_callback_placeholder'
-                    : 'auth_login.oauth_callback_placeholder'
-                )}
-              />
-              <div className={styles.callbackActions}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => submitCallback(provider.id)}
-                  loading={state.callbackSubmitting}
-                >
-                  {t('auth_login.oauth_callback_button')}
-                </Button>
-              </div>
-              {state.callbackStatus === 'success' && state.status === 'waiting' && (
-                <div className="status-badge success">
-                  {t('auth_login.oauth_callback_status_success')}
-                </div>
-              )}
-              {state.callbackStatus === 'error' && (
-                <div className="status-badge error">
-                  {t('auth_login.oauth_callback_status_error')} {state.callbackError || ''}
-                </div>
-              )}
-            </div>
-          )}
-          {isMagicLinkFlow && (
-            <div className={styles.magicLinkSection}>
-              <div className={styles.magicLinkNotice}>
-                {t('auth_login.anthropic_magic_link_hint')}
-              </div>
-              <Input
-                label={t('auth_login.anthropic_magic_link_label')}
-                value={state.magicLink || ''}
-                onChange={(e) =>
-                  updateProviderState(provider.id, {
-                    magicLink: e.target.value,
-                    magicLinkStatus: undefined,
-                    magicLinkError: undefined,
-                  })
-                }
-                placeholder={t('auth_login.anthropic_magic_link_placeholder')}
-                type="password"
-                inputMode="url"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
-              <div className={styles.callbackActions}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => submitMagicLink(provider.id)}
-                  loading={state.magicLinkSubmitting}
-                >
-                  {t('auth_login.anthropic_magic_link_button')}
-                </Button>
-              </div>
-              {state.magicLinkStatus === 'success' && state.status === 'waiting' && (
-                <div className={styles.magicLinkSubmittedRow}>
-                  <div className="status-badge success">
-                    {t('auth_login.anthropic_magic_link_status_success')}
-                  </div>
+                <div className={styles.authUrlValue}>{state.url}</div>
+                <div className={styles.authUrlActions}>
+                  <Button variant="secondary" size="sm" onClick={() => copyLink(state.url!)}>
+                    {getProviderText(provider, 'copy_link')}
+                  </Button>
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() =>
-                      setClaudeVerification({ open: true, state: state.state?.trim() })
-                    }
+                    onClick={() => window.open(state.url, '_blank', 'noopener,noreferrer')}
                   >
-                    {t('auth_login.anthropic_browser_open_button')}
+                    {getProviderText(provider, 'open_link')}
                   </Button>
                 </div>
-              )}
-              {state.magicLinkStatus === 'error' && (
-                <div className="status-badge error">
-                  {t('auth_login.anthropic_magic_link_status_error')} {state.magicLinkError || ''}
+              </div>
+            )}
+            {canSubmitCallback && (
+              <div className={styles.callbackSection}>
+                <Input
+                  label={t(
+                    provider.id === 'xai'
+                      ? 'auth_login.xai_callback_label'
+                      : 'auth_login.oauth_callback_label'
+                  )}
+                  hint={t(
+                    provider.id === 'xai'
+                      ? 'auth_login.xai_callback_hint'
+                      : 'auth_login.oauth_callback_hint'
+                  )}
+                  value={state.callbackUrl || ''}
+                  onChange={(e) =>
+                    updateProviderState(provider.id, {
+                      callbackUrl: e.target.value,
+                      callbackStatus: undefined,
+                      callbackError: undefined,
+                    })
+                  }
+                  placeholder={t(
+                    provider.id === 'xai'
+                      ? 'auth_login.xai_callback_placeholder'
+                      : 'auth_login.oauth_callback_placeholder'
+                  )}
+                />
+                <div className={styles.callbackActions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => submitCallback(provider.id)}
+                    loading={state.callbackSubmitting}
+                  >
+                    {t('auth_login.oauth_callback_button')}
+                  </Button>
                 </div>
-              )}
-            </div>
-          )}
-          {state.status && state.status !== 'idle' && (
-            <div className={statusBadgeClassName}>
-              {state.status === 'success'
-                ? getProviderText(provider, 'oauth_status_success')
-                : state.status === 'error'
-                  ? `${getProviderText(provider, 'oauth_status_error')} ${state.error || ''}`
-                  : getProviderText(provider, 'oauth_status_waiting')}
-            </div>
-          )}
-          {state.status === 'success' && (
-            <div className={styles.successActions}>
-              <Button variant="secondary" size="sm" onClick={() => navigate('/auth-files')}>
-                {t('auth_login.view_auth_files')}
-              </Button>
-            </div>
-          )}
-        </div>
+                {state.callbackStatus === 'success' && state.status === 'waiting' && (
+                  <div className="status-badge success">
+                    {t('auth_login.oauth_callback_status_success')}
+                  </div>
+                )}
+                {state.callbackStatus === 'error' && (
+                  <div className="status-badge error">
+                    {t('auth_login.oauth_callback_status_error')} {state.callbackError || ''}
+                  </div>
+                )}
+              </div>
+            )}
+            {state.status && state.status !== 'idle' && (
+              <div className={statusBadgeClassName}>
+                {state.status === 'success'
+                  ? getProviderText(provider, 'oauth_status_success')
+                  : state.status === 'error'
+                    ? `${getProviderText(provider, 'oauth_status_error')} ${state.error || ''}`
+                    : getProviderText(provider, 'oauth_status_waiting')}
+              </div>
+            )}
+            {state.status === 'success' && (
+              <div className={styles.successActions}>
+                <Button variant="secondary" size="sm" onClick={() => navigate('/auth-files')}>
+                  {t('auth_login.view_auth_files')}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     );
   };
@@ -1116,12 +847,6 @@ export function OAuthPage() {
           </Card>
         </section>
       </div>
-      <ClaudeBrowserVerificationModal
-        open={claudeVerification.open}
-        oauthState={claudeVerification.state}
-        apiBase={apiBase}
-        onClose={() => setClaudeVerification((current) => ({ ...current, open: false }))}
-      />
     </div>
   );
 }

@@ -68,6 +68,11 @@ export const oauthApi = {
       params: { state },
     }),
 
+  cancelAuthSession: (state: string) =>
+    apiClient.delete<{ status: 'ok'; cancelled: boolean }>('/oauth-session', {
+      params: { state },
+    }),
+
   submitCallback: (provider: string, redirectUrl: string) => {
     const providerKey = normalizeProviderForManagementPath(provider);
     return apiClient.post<OAuthCallbackResponse>('/oauth-callback', {
